@@ -69,4 +69,57 @@ describe('StartPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Concepts & Recall/i }));
     expect(onSectionSelect).toHaveBeenCalledWith(1);
   });
+
+  describe('root-level questions (implicit section)', () => {
+    const implicitSections: Section[] = [
+      mkSection('a', 'qwert-section', 1, ''),
+      {
+        identifier: 'root-implicit',
+        name: 'Qwert-test', // the questionset's own root name — must never render as a card label
+        isImplicitSection: true,
+        children: [
+          { identifier: 'test', name: 'test', body: '', primaryCategory: 'multiple choice question', maxScore: 1 },
+          { identifier: 'maths', name: 'maths', body: '', primaryCategory: 'multiple choice question', maxScore: 1 },
+        ],
+        timeLimits: { max: 0, min: 0 },
+        allowSkip: true,
+        shuffle: false,
+      },
+    ];
+
+    it('gives each root-level question its own card instead of one lumped, mislabeled card', () => {
+      render(
+        <StartPage
+          {...baseProps}
+          sections={implicitSections}
+          totalQuestions={3}
+          totalSections={3}
+        />,
+      );
+      // No card is ever labeled with the questionset's own root name.
+      expect(screen.queryByText('Qwert-test')).not.toBeInTheDocument();
+      // Each root-level question gets its own card, by its own title.
+      expect(screen.getByText('test')).toBeInTheDocument();
+      expect(screen.getByText('maths')).toBeInTheDocument();
+      // Lettered continuously with the real section: A, B, C.
+      expect(screen.getByText('A')).toBeInTheDocument();
+      expect(screen.getByText('B')).toBeInTheDocument();
+      expect(screen.getByText('C')).toBeInTheDocument();
+    });
+
+    it('jumps straight to a root-level question via onQuestionSelect', () => {
+      const onQuestionSelect = vi.fn();
+      render(
+        <StartPage
+          {...baseProps}
+          sections={implicitSections}
+          totalQuestions={3}
+          totalSections={3}
+          onQuestionSelect={onQuestionSelect}
+        />,
+      );
+      fireEvent.click(screen.getByRole('button', { name: /maths/i }));
+      expect(onQuestionSelect).toHaveBeenCalledWith(1, 1);
+    });
+  });
 });

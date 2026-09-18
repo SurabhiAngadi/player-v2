@@ -47,6 +47,13 @@ export interface StartPageProps {
   onStart: () => void;
   /** Optional jump-to-section from a section card (defaults to Start). */
   onSectionSelect?: (index: number) => void;
+  /**
+   * Optional jump straight to a specific root-level question's own card (a
+   * section synthesized to hold questions with no authored Section wrapper
+   * contributes one card per question here, not one lumped card for the
+   * whole group — see the render loop below).
+   */
+  onQuestionSelect?: (sectionIndex: number, questionIndex: number) => void;
   language?: string;
 }
 
@@ -67,6 +74,7 @@ export function StartPage({
   hasStarted = false,
   onStart,
   onSectionSelect,
+  onQuestionSelect,
   language = 'en',
 }: StartPageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -153,38 +161,80 @@ export function StartPage({
             <p className={styles.sectionsNote}>{t(language, 'SECTIONS_COVER_NOTE')}</p>
 
             <div className={styles.grid}>
-              {sections.map((section, i) => {
-                const blurb = readI18n(section.description, language);
-                const name = readI18n(section.name, language);
-                // Section cards jump straight into the assessment (bypassing
-                // Start/Resume), so they must be disabled too once attempts
-                // are exhausted — otherwise they're a second way in.
-                const sectionSelectable = onSectionSelect && !attemptsExhausted;
-                const Tag = sectionSelectable ? 'button' : 'div';
-                return (
-                  <Tag
-                    key={section.identifier}
-                    className={styles.sectionCard}
-                    {...(sectionSelectable
-                      ? { type: 'button' as const, onClick: () => onSectionSelect(i) }
-                      : {})}
-                  >
-                    <div className={styles.cardTop}>
-                      {i < MAX_BADGED_SECTIONS && (
-                        <span className={styles.badge} aria-hidden="true">
-                          {String.fromCharCode(65 + i)}
-                        </span>
-                      )}
-                      <span className={styles.cardName}>{name}</span>
-                      {sectionSelectable && (
-                        <ChevronRightIcon size={18} className={styles.cardChevron} />
-                      )}
-                    </div>
-                    <span className={styles.cardCount}>{questionLabel(section.children.length)}</span>
-                    {blurb && <span className={styles.cardBlurb}>{blurb}</span>}
-                  </Tag>
-                );
-              })}
+              {(() => {
+                // A real section gets one card; a section synthesized to hold
+                // root-level questions with no authored Section wrapper
+                // (isImplicitSection) isn't a section at all — each of its
+                // questions gets its own card instead, a sibling in the same
+                // lettered sequence as section cards, same as the Sidebar/Header.
+                let letterOrdinal = 0;
+                return sections.map((section, sectionIndex) => {
+                  if (section.isImplicitSection) {
+                    return section.children.map((question, qIndex) => {
+                      const ordinal = letterOrdinal;
+                      letterOrdinal += 1;
+                      const questionSelectable = onQuestionSelect && !attemptsExhausted;
+                      const Tag = questionSelectable ? 'button' : 'div';
+                      const qName = question.name || `${t(language, 'QUESTION')} ${qIndex + 1}`;
+                      return (
+                        <Tag
+                          key={question.identifier}
+                          className={styles.sectionCard}
+                          {...(questionSelectable
+                            ? { type: 'button' as const, onClick: () => onQuestionSelect(sectionIndex, qIndex) }
+                            : {})}
+                        >
+                          <div className={styles.cardTop}>
+                            {ordinal < MAX_BADGED_SECTIONS && (
+                              <span className={styles.badge} aria-hidden="true">
+                                {String.fromCharCode(65 + ordinal)}
+                              </span>
+                            )}
+                            <span className={styles.cardName}>{qName}</span>
+                            {questionSelectable && (
+                              <ChevronRightIcon size={18} className={styles.cardChevron} />
+                            )}
+                          </div>
+                          <span className={styles.cardCount}>{questionLabel(1)}</span>
+                        </Tag>
+                      );
+                    });
+                  }
+
+                  const ordinal = letterOrdinal;
+                  letterOrdinal += 1;
+                  const blurb = readI18n(section.description, language);
+                  const name = readI18n(section.name, language);
+                  // Section cards jump straight into the assessment (bypassing
+                  // Start/Resume), so they must be disabled too once attempts
+                  // are exhausted — otherwise they're a second way in.
+                  const sectionSelectable = onSectionSelect && !attemptsExhausted;
+                  const Tag = sectionSelectable ? 'button' : 'div';
+                  return (
+                    <Tag
+                      key={section.identifier}
+                      className={styles.sectionCard}
+                      {...(sectionSelectable
+                        ? { type: 'button' as const, onClick: () => onSectionSelect(sectionIndex) }
+                        : {})}
+                    >
+                      <div className={styles.cardTop}>
+                        {ordinal < MAX_BADGED_SECTIONS && (
+                          <span className={styles.badge} aria-hidden="true">
+                            {String.fromCharCode(65 + ordinal)}
+                          </span>
+                        )}
+                        <span className={styles.cardName}>{name}</span>
+                        {sectionSelectable && (
+                          <ChevronRightIcon size={18} className={styles.cardChevron} />
+                        )}
+                      </div>
+                      <span className={styles.cardCount}>{questionLabel(section.children.length)}</span>
+                      {blurb && <span className={styles.cardBlurb}>{blurb}</span>}
+                    </Tag>
+                  );
+                });
+              })()}
             </div>
 
             <button

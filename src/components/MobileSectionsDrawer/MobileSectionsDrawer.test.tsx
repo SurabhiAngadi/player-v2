@@ -19,8 +19,10 @@ const sections: Section[] = [
 const baseProps = {
   sections,
   currentSectionIndex: 0,
+  currentQuestionIndex: 0,
   answers: {},
   onSectionJump: vi.fn(),
+  onQuestionJump: vi.fn(),
 };
 
 describe('MobileSectionsDrawer', () => {
@@ -57,6 +59,23 @@ describe('MobileSectionsDrawer', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /Section One/i }));
     expect(onSectionJump).toHaveBeenCalledWith(0);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('closes after a question jump', () => {
+    const onClose = vi.fn();
+    const onQuestionJump = vi.fn();
+    render(
+      <MobileSectionsDrawer
+        {...baseProps}
+        onQuestionJump={onQuestionJump}
+        isOpen
+        onClose={onClose}
+      />,
+    );
+    // Section One has 1 question, unnamed → positional fallback "Question 1".
+    fireEvent.click(screen.getByRole('button', { name: /Question 1/i }));
+    expect(onQuestionJump).toHaveBeenCalledWith(0, 0);
     expect(onClose).toHaveBeenCalled();
   });
 });

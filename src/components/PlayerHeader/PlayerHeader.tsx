@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { t, readI18n } from '../../i18n/translations';
 import { TimerIcon, MenuIcon } from '../icons';
-import type { Section } from '../../types';
+import { isAnswered } from '../../utils/answered';
+import type { Section, AnswersMap } from '../../types';
 import styles from './PlayerHeader.module.scss';
 
 /**
@@ -15,7 +16,15 @@ export interface PlayerHeaderProps {
   brand: string;
   sections: Section[];
   currentSectionIndex: number;
+  currentQuestionIndex: number;
   completed: boolean[];
+  /**
+   * Drives the per-question step status for root-level questions (a section
+   * synthesized to hold questions with no authored Section wrapper —
+   * `section.isImplicitSection` — contributes one step per question instead
+   * of one step for the whole group; real sections still contribute one).
+   */
+  answers: AnswersMap;
   /** Seconds remaining (countdown mode); null/omitted hides the countdown. */
   timeRemaining?: number | null;
   /**
@@ -61,7 +70,9 @@ export function PlayerHeader({
   brand,
   sections,
   currentSectionIndex,
+  currentQuestionIndex,
   completed,
+  answers,
   timeRemaining = null,
   timeElapsed = null,
   questionNumber,
@@ -109,24 +120,50 @@ export function PlayerHeader({
         {sectionLabel && <span className={styles.sectionLabel}>{sectionLabel}</span>}
 
         <ol className={styles.steps} aria-label={t(language, 'SECTIONS')}>
-          {sections.map((section, index) => {
-            const status =
-              index === currentSectionIndex
-                ? 'active'
-                : completed[index]
-                  ? 'completed'
-                  : 'upcoming';
-            return (
-              <li
-                key={section.identifier}
-                className={`${styles.step} ${styles[status]}`}
-                aria-current={status === 'active' ? 'step' : undefined}
-                title={readI18n(section.name, language)}
-              >
-                <span className={styles.stepDot}>{String.fromCharCode(65 + index)}</span>
-              </li>
-            );
-          })}
+          {(() => {
+            // A real, authored section contributes one step. A section
+            // synthesized to hold root-level questions with no Section
+            // wrapper (isImplicitSection) isn't a section at all — each of
+            // its questions is its own step instead, a sibling in the same
+            // A/B/C… sequence as section cards, same as the Sidebar.
+            type Step = { key: string; title: string; active: boolean; completed: boolean };
+            const steps: Step[] = [];
+
+            sections.forEach((section, sectionIndex) => {
+              if (section.isImplicitSection) {
+                section.children.forEach((question, questionIndex) => {
+                  steps.push({
+                    key: question.identifier,
+                    title: question.name || readI18n(section.name, language),
+                    active: sectionIndex === currentSectionIndex && questionIndex === currentQuestionIndex,
+                    completed: isAnswered(answers[question.identifier]),
+                  });
+                });
+                return;
+              }
+              steps.push({
+                key: section.identifier,
+                title: readI18n(section.name, language),
+                active: sectionIndex === currentSectionIndex,
+                completed: completed[sectionIndex],
+              });
+            });
+
+            return steps.map((step, index) => {
+              const letter = String.fromCharCode(65 + index);
+              const status = step.active ? 'active' : step.completed ? 'completed' : 'upcoming';
+              return (
+                <li
+                  key={step.key}
+                  className={`${styles.step} ${styles[status]}`}
+                  aria-current={status === 'active' ? 'step' : undefined}
+                  title={step.title}
+                >
+                  <span className={styles.stepDot}>{letter}</span>
+                </li>
+              );
+            });
+          })()}
         </ol>
       </div>
 

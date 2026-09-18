@@ -38,6 +38,19 @@ export interface LoadOptions {
    * host does not supply one. A full `window.question*Url` override still wins.
    */
   pathPrefix?: string;
+  /**
+   * Authoring/preview context — fetch the DRAFT working copy rather than the
+   * published one.
+   *
+   * On the Sunbird backend `?mode=edit` returns the Draft/`.img` node instead
+   * of the Live node whenever a draft exists. That is what an editor preview
+   * wants (the whole point is to see unsaved/unpublished work), but it must
+   * never be the default: the fetch path this flag controls is also used for
+   * real learner delivery, where serving a creator's in-progress draft is a
+   * content leak. Defaults to false, so Draft access is always an explicit
+   * opt-in.
+   */
+  previewMode?: boolean;
 }
 
 /** Normalize the API path prefix (host slug); falls back to `/api`. */
@@ -80,8 +93,15 @@ export async function getQuestionSetHierarchy(
     `${apiPrefix(opts.pathPrefix)}${ApiPaths.questionSetHierarchy}`;
   // Base ends with `/` (identifier appended); tolerate a host value without one.
   const path = base.endsWith('/') ? `${base}${identifier}` : `${base}/${identifier}`;
-  // mode=edit so the editor can preview draft / in-progress question sets.
-  const url = path.includes('?') ? `${path}&mode=edit` : `${path}?mode=edit`;
+  // `mode=edit` makes the backend return the Draft/.img working copy over the
+  // Live node, so it is opt-in for authoring previews only (see
+  // LoadOptions.previewMode). Learner delivery falls through to the plain
+  // path and therefore only ever sees published content.
+  const url = opts.previewMode
+    ? path.includes('?')
+      ? `${path}&mode=edit`
+      : `${path}?mode=edit`
+    : path;
   const result = await httpGet<QuestionSetHierarchyResult>(url, { baseURL: opts.baseUrl });
   if (!result?.questionset) {
     throw new QumlApiError('invalid', 'Hierarchy response missing `questionset`');
@@ -123,23 +143,82 @@ export async function getQuestions(
   return results.flatMap((r) => r?.questions ?? []);
 }
 
-/** Top-level children that represent sections (question stubs live under them). */
+/**
+ * Section-level config/metadata a synthetic (implicit) section inherits from
+ * the questionset root, since it has no authored section node of its own.
+ */
+const IMPLICIT_SECTION_INHERITED_KEYS = [
+  'instructions',
+  'timeLimits',
+  'allowSkip',
+  'shuffle',
+  'showTimer',
+  'showSolutions',
+  'showHints',
+  'showFeedback',
+  'metadata',
+] as const;
+
+/** Build a synthetic section node wrapping a run of root-level question stubs. */
+function wrapImplicitSection(
+  questionSet: RawQuestionSet,
+  runIndex: number,
+  run: RawQuestionSetChild[],
+): RawQuestionSetChild {
+  const inherited: Record<string, unknown> = {};
+  for (const key of IMPLICIT_SECTION_INHERITED_KEYS) {
+    if (questionSet[key] !== undefined) inherited[key] = questionSet[key];
+  }
+  return {
+    ...inherited,
+    identifier: `${questionSet.identifier}_implicit_${runIndex}`,
+    objectType: 'QuestionSet',
+    name: questionSet.name,
+    isImplicitSection: true,
+    children: run,
+  } as unknown as RawQuestionSetChild;
+}
+
+/**
+ * Top-level children that represent sections (question stubs live under
+ * them). Three layouts are supported:
+ *  - fully sectioned: every child is a Section → returned as-is;
+ *  - fully flat: every child is a bare Question → the whole root is wrapped
+ *    as one implicit section;
+ *  - mixed: Section and bare Question children interleaved at root → each
+ *    consecutive run of loose questions is wrapped as its own implicit
+ *    section, preserving the original hierarchy order relative to the real,
+ *    authored sections.
+ */
 function extractSectionNodes(questionSet: RawQuestionSet): RawQuestionSetChild[] {
   const children = questionSet.children ?? [];
   if (children.length === 0) return [];
-  // Flat set: questions directly under the root, no sections → wrap as one section.
+
   const allQuestions = children.every((c) => c.objectType === 'Question');
-  if (allQuestions) return [questionSet as unknown as RawQuestionSetChild];
-  // Mixed layout (Section + bare Question siblings) is unsupported; the loose
-  // questions are not rendered. Warn instead of dropping them silently.
-  const loose = children.filter((c) => c.objectType === 'Question');
-  if (loose.length > 0) {
-    console.warn(
-      `[data-service] ${loose.length} root-level question(s) ignored (mixed section/question layout unsupported):`,
-      loose.map((q) => q.identifier),
-    );
+  if (allQuestions) {
+    return [{ ...questionSet, isImplicitSection: true } as unknown as RawQuestionSetChild];
   }
-  return children.filter((c) => c.objectType !== 'Question');
+  if (children.every((c) => c.objectType !== 'Question')) return children;
+
+  // Mixed layout: walk children in order, grouping consecutive loose
+  // questions into implicit sections interleaved with the real ones.
+  const nodes: RawQuestionSetChild[] = [];
+  let runIndex = 0;
+  for (let i = 0; i < children.length; ) {
+    if (children[i].objectType !== 'Question') {
+      nodes.push(children[i]);
+      i += 1;
+      continue;
+    }
+    const run: RawQuestionSetChild[] = [];
+    while (i < children.length && children[i].objectType === 'Question') {
+      run.push(children[i]);
+      i += 1;
+    }
+    nodes.push(wrapImplicitSection(questionSet, runIndex, run));
+    runIndex += 1;
+  }
+  return nodes;
 }
 
 /** Question stubs within a section, ordered by `index` when present. */

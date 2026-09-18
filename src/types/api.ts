@@ -52,6 +52,13 @@ export interface RawQuestionSetChild {
   objectType?: string;
   index?: number;
   children?: RawQuestionSetChild[];
+  /**
+   * Set by `extractSectionNodes` when this node is a section synthesized to
+   * hold root-level questions that weren't authored under a real Section
+   * (fully-flat questionset, or loose questions in a mixed layout) — it has
+   * no author-provided identity of its own.
+   */
+  isImplicitSection?: boolean;
   [key: string]: unknown;
 }
 

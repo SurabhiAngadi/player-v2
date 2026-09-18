@@ -86,9 +86,11 @@ describe('MainPlayer — full portal path (shallow metadata → /portal fetch �
       </QumlProvider>,
     );
 
-    // Hierarchy fetched from the portal gateway route (not /learner).
+    // Hierarchy fetched from the portal gateway route (not /learner), with no
+    // `?mode=edit`: the portal sets no `config.mode`, so this is learner
+    // delivery and must resolve to the Live node, never a Draft working copy.
     await waitFor(() =>
-      expect(mockGet).toHaveBeenCalledWith('/portal/questionset/v2/hierarchy/do_qs?mode=edit', expect.anything()),
+      expect(mockGet).toHaveBeenCalledWith('/portal/questionset/v2/hierarchy/do_qs', expect.anything()),
     );
     // Question list fetched from the portal gateway route (not /api or /action);
     // a ?lang= suffix is appended from config.language.
@@ -118,4 +120,29 @@ describe('MainPlayer — full portal path (shallow metadata → /portal fetch �
     await waitFor(() => expect(received.some((e) => e.eid === 'ERROR')).toBe(true));
     unsub();
   });
+
+  // The editor forwards its own edit/review/read state on `config.mode`; that
+  // marks an authoring context and opts the fetch into the Draft working copy,
+  // preserving editor preview of unpublished questionsets.
+  it.each(['edit', 'review', 'read', 'orgreview', 'sourcingreview'])(
+    'requests the draft working copy for editor mode "%s"',
+    async (mode) => {
+      mockGet.mockResolvedValue(hierarchy);
+      mockPost.mockResolvedValue({ questions });
+      const editorCfg: PlayerConfig = { ...cfg, config: { language: 'en', mode } };
+
+      render(
+        <QumlProvider playerConfig={editorCfg}>
+          <MainPlayer playerConfig={editorCfg} />
+        </QumlProvider>,
+      );
+
+      await waitFor(() =>
+        expect(mockGet).toHaveBeenCalledWith(
+          '/portal/questionset/v2/hierarchy/do_qs?mode=edit',
+          expect.anything(),
+        ),
+      );
+    },
+  );
 });

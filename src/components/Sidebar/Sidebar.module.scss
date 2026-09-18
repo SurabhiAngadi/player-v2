@@ -33,20 +33,17 @@
   list-style: none;
 }
 
+// .card is now the outer frame (border/background/shadow); .cardMain (the
+// jump-to-section button) and .expandToggle (the collapse chevron) sit
+// side by side inside it, each their own interactive element.
 .card {
-  @include m.focus-ring;
-
   display: flex;
-  align-items: flex-start;
-  gap: v.$space-3;
+  align-items: stretch;
   width: 100%;
-  padding: v.$space-5;
   border: 1.5px solid transparent;
   border-radius: var(--qp-r-md);
   background: v.$white;
   box-shadow: v.$shadow-sm;
-  text-align: start;
-  cursor: pointer;
   transition: border-color v.$dur-fast v.$ease-out, box-shadow v.$dur-fast v.$ease-out;
 
   &:hover {
@@ -57,6 +54,48 @@
 .active {
   border-color: var(--qp-primary);
   background: v.$ivory;
+}
+
+.cardMain {
+  @include m.focus-ring;
+
+  display: flex;
+  align-items: flex-start;
+  gap: v.$space-3;
+  flex: 1;
+  min-width: 0;
+  padding: v.$space-5;
+  background: transparent;
+  border: none;
+  text-align: start;
+  cursor: pointer;
+}
+
+.expandToggle {
+  @include m.focus-ring;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  border: none;
+  background: transparent;
+  color: v.$gray-400;
+  cursor: pointer;
+  transition: color v.$dur-fast v.$ease-out;
+
+  &:hover {
+    color: v.$gray-500;
+  }
+}
+
+.expandIcon {
+  transition: transform v.$dur-fast v.$ease-out;
+}
+
+.expandIconOpen {
+  transform: rotate(90deg);
 }
 
 // ── Letter badge ─────────────────────────────────────────────────────────────
@@ -117,4 +156,113 @@
 
 .remaining {
   color: v.$gray-400;
+}
+
+// ── Question sub-items, nested under a section's card ───────────────────────
+.subList {
+  display: flex;
+  flex-direction: column;
+  gap: v.$space-2;
+  margin: v.$space-2 0 0;
+  padding: 0 0 0 v.$space-6;
+  list-style: none;
+}
+
+.subItem {
+  @include m.focus-ring;
+
+  display: flex;
+  align-items: center;
+  gap: v.$space-2;
+  width: 100%;
+  padding: v.$space-2 v.$space-3;
+  border: 1px solid transparent;
+  border-radius: var(--qp-r-md);
+  background: transparent;
+  text-align: start;
+  cursor: pointer;
+  font-family: var(--qp-font-sans);
+  font-size: v.$text-sm;
+  color: v.$gray-500;
+  transition: border-color v.$dur-fast v.$ease-out, background v.$dur-fast v.$ease-out;
+
+  &:hover {
+    background: v.$g200;
+  }
+}
+
+.subItemAnswered {
+  color: v.$g900;
+}
+
+.subItemActive {
+  border-color: var(--qp-primary);
+  background: v.$ivory;
+  color: v.$g900;
+  font-weight: v.$fw-medium;
+}
+
+.subName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// ── Status dot for a loose (root-level) question — it has no section to roll
+// its answered state up into an aggregate count, so it gets its own: hollow
+// while unanswered, filled in the brand color once answered. ───────────────
+.statusDot {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: v.$text-sm;
+  color: v.$gray-400;
+}
+
+.statusDotAnswered {
+  color: var(--qp-primary);
+}
+
+// ── Loose items: questions from an implicit (root-level) section — flat,
+// unindented, but each still gets the same lettered badge a section card
+// gets (it's a top-level step in the same A/B/C… sequence). Deliberately
+// flat (no shadow, filled neutral background) rather than dashed — a dashed
+// border reads as "placeholder / unfinished"; a filled, elevation-less row
+// reads as "a different, quieter tier" without looking broken. Left accent
+// bar doubles up the answered state alongside the badge. ───────────────────
+.looseItem {
+  @include m.focus-ring;
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: v.$space-3;
+  width: 100%;
+  padding: v.$space-3 v.$space-4 v.$space-3 v.$space-5;
+  border: 1px solid v.$gray-200;
+  border-left: 3px solid v.$g300;
+  border-radius: var(--qp-r-md);
+  background: v.$g100;
+  text-align: start;
+  cursor: pointer;
+  font-family: var(--qp-font-sans);
+  font-size: v.$text-sm;
+  color: v.$gray-500;
+  transition: border-color v.$dur-fast v.$ease-out, background v.$dur-fast v.$ease-out;
+
+  &:hover {
+    background: v.$g200;
+  }
+}
+
+.looseItemAnswered {
+  border-left-color: var(--qp-primary);
+}
+
+.looseItemActive {
+  border-color: var(--qp-primary);
+  border-left-color: var(--qp-primary);
+  background: v.$ivory;
+  color: v.$g900;
+  font-weight: v.$fw-medium;
+  box-shadow: v.$shadow-sm;
 }

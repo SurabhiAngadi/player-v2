@@ -100,7 +100,10 @@ export function ReviewScreen({
     0,
     sectionStarts.filter((start) => start <= index).length - 1,
   );
+  const currentQuestionIndex = index - (sectionStarts[currentSectionIndex] ?? 0);
   const jumpToSection = (sectionIndex: number) => setIndex(sectionStarts[sectionIndex] ?? 0);
+  const jumpToQuestion = (sectionIndex: number, questionIndex: number) =>
+    setIndex((sectionStarts[sectionIndex] ?? 0) + questionIndex);
 
   if (questions.length === 0) {
     return (
@@ -149,8 +152,10 @@ export function ReviewScreen({
           <Sidebar
             sections={sections}
             currentSectionIndex={currentSectionIndex}
+            currentQuestionIndex={currentQuestionIndex}
             answers={answers}
             onSectionJump={jumpToSection}
+            onQuestionJump={jumpToQuestion}
             language={language}
           />
         </aside>

@@ -134,5 +134,68 @@ describe('embedded questionset metadata (editor/portal contract)', () => {
     // scoring hints preserved for FTB
     expect(sections[1].children[0].responseProcessing?.template).toBe('MAP_RESPONSE');
     expect(sections[1].children[0].evalUnordered).toBe(true);
+    // real, authored sections are never flagged implicit
+    expect(sections[0].isImplicitSection).toBeFalsy();
+    expect(sections[1].isImplicitSection).toBeFalsy();
+  });
+});
+
+describe('flat and mixed root layouts', () => {
+  const question = (id: string, index: number) => ({
+    identifier: id,
+    name: id,
+    objectType: 'Question',
+    primaryCategory: 'Multiple Choice Question',
+    qType: 'MCQ',
+    index,
+    maxScore: 1,
+    body: `<div>${id}</div>`,
+    interactions: { response1: { type: 'choice', options: [{ label: { en: 'a' }, value: 0 }] } },
+    responseDeclaration: {
+      response1: { cardinality: 'single', type: 'integer', correctResponse: { value: 0 } },
+    },
+  });
+
+  it('fully flat root (all questions, no sections) wraps as one implicit section', () => {
+    const flat = {
+      identifier: 'do_flat',
+      name: 'Flat set',
+      objectType: 'QuestionSet',
+      children: [question('q2', 2), question('q1', 1)],
+    };
+    const sections = transformEmbeddedQuestionSet(flat);
+    expect(sections).toHaveLength(1);
+    expect(sections[0].isImplicitSection).toBe(true);
+    // ordered by stub `index`, not hierarchy order
+    expect(sections[0].children.map((q) => q.identifier)).toEqual(['q1', 'q2']);
+  });
+
+  it('mixed layout (loose questions + real sections) preserves hierarchy order and drops nothing', () => {
+    const realSection = {
+      identifier: 'do_section',
+      name: 'Section A',
+      objectType: 'QuestionSet',
+      children: [question('q2', 1)],
+    };
+    const mixed = {
+      identifier: 'do_mixed',
+      name: 'Mixed set',
+      objectType: 'QuestionSet',
+      children: [question('q1', 1), realSection, question('q3', 1)],
+    };
+    const sections = transformEmbeddedQuestionSet(mixed);
+    expect(sections).toHaveLength(3);
+    expect(sections[0].isImplicitSection).toBe(true);
+    expect(sections[0].children.map((q) => q.identifier)).toEqual(['q1']);
+    expect(sections[1].isImplicitSection).toBeFalsy();
+    expect(sections[1].children.map((q) => q.identifier)).toEqual(['q2']);
+    expect(sections[2].isImplicitSection).toBe(true);
+    expect(sections[2].children.map((q) => q.identifier)).toEqual(['q3']);
+    // no question dropped across the whole set
+    expect(sections.flatMap((s) => s.children.map((q) => q.identifier)).sort()).toEqual([
+      'q1',
+      'q2',
+      'q3',
+    ]);
   });
 });

@@ -17,8 +17,10 @@ export interface MobileSectionsDrawerProps {
   onClose: () => void;
   sections: Section[];
   currentSectionIndex: number;
+  currentQuestionIndex: number;
   answers: AnswersMap;
   onSectionJump: (sectionIndex: number) => void;
+  onQuestionJump: (sectionIndex: number, questionIndex: number) => void;
   language?: string;
 }
 
@@ -27,8 +29,10 @@ export function MobileSectionsDrawer({
   onClose,
   sections,
   currentSectionIndex,
+  currentQuestionIndex,
   answers,
   onSectionJump,
+  onQuestionJump,
   language = 'en',
 }: MobileSectionsDrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -104,9 +108,14 @@ export function MobileSectionsDrawer({
         <Sidebar
           sections={sections}
           currentSectionIndex={currentSectionIndex}
+          currentQuestionIndex={currentQuestionIndex}
           answers={answers}
           onSectionJump={(i) => {
             onSectionJump(i);
+            onClose();
+          }}
+          onQuestionJump={(sectionIndex, questionIndex) => {
+            onQuestionJump(sectionIndex, questionIndex);
             onClose();
           }}
           language={language}

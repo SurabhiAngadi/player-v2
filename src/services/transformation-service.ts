@@ -276,6 +276,7 @@ export function transformSection(section: any): Section | null {
     // suppresses; undefined defers to the assessment-level config. Read
     // top-level then `metadata`, mirroring sectionBooleanFlag's source order.
     showFeedback: sectionTriStateFlag(section, 'showFeedback'),
+    isImplicitSection: Boolean(section.isImplicitSection),
   };
 }
 

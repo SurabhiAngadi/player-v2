@@ -87,6 +87,8 @@ export const translations: Record<string, string> = {
   OPEN_MENU: 'Open navigation menu',
   CLOSE_MENU: 'Close navigation menu',
   SUBMIT_ASSESSMENT: 'Submit Assessment',
+  EXPAND_SECTION: 'Expand section',
+  COLLAPSE_SECTION: 'Collapse section',
 
   // Assessment overview (Phase 6 design)
   PROGRESS_SAVED: 'Progress is saved',
