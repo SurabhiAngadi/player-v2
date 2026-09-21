@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { hasAuthoredSection, expandsPerQuestion, sectionStepCount, sectionStepOrdinal } from './sections';
+import {
+  hasAuthoredSection,
+  expandsPerQuestion,
+  globalQuestionNumber,
+  sectionStepCount,
+  sectionStepOrdinal,
+  stepLabel,
+} from './sections';
 import type { Section } from '../types';
 
 const q = (id: string) => ({
@@ -78,5 +85,36 @@ describe('sectionStepOrdinal', () => {
 
   it('is defensive about out-of-range indices', () => {
     expect(sectionStepOrdinal(mixed, -1)).toBe(0);
+  });
+});
+
+describe('stepLabel', () => {
+  it('numbers from 1 and has no ceiling at 26', () => {
+    expect(stepLabel(0)).toBe('1');
+    // Lettering produced '[' here — String.fromCharCode(65 + 26).
+    expect(stepLabel(26)).toBe('27');
+    expect(stepLabel(99)).toBe('100');
+  });
+});
+
+describe('globalQuestionNumber', () => {
+  // mixed = [SecA(1q), implicit(2q), SecB(1q)] → 4 questions end to end.
+  it('counts straight through every section', () => {
+    expect(globalQuestionNumber(mixed, 0, 0)).toBe(1); // SecA q1
+    expect(globalQuestionNumber(mixed, 1, 0)).toBe(2); // loose1
+    expect(globalQuestionNumber(mixed, 1, 1)).toBe(3); // loose2
+    expect(globalQuestionNumber(mixed, 2, 0)).toBe(4); // SecB q1
+  });
+
+  it('distinguishes questions within one section', () => {
+    // The whole point: a section index alone reports the same value for all of
+    // these, so per-question jumps become indistinguishable in telemetry.
+    expect(globalQuestionNumber(flat, 0, 0)).toBe(1);
+    expect(globalQuestionNumber(flat, 0, 1)).toBe(2);
+    expect(globalQuestionNumber(flat, 0, 2)).toBe(3);
+  });
+
+  it('is defensive about out-of-range indices', () => {
+    expect(globalQuestionNumber(mixed, -1, 0)).toBe(1);
   });
 });

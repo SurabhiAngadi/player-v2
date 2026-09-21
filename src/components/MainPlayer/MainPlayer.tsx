@@ -25,6 +25,7 @@ import { calculateScore } from '../../registry/scoring-registry';
 import { isAnswered } from '../../utils/answered';
 import {
   expandsPerQuestion,
+  globalQuestionNumber,
   sectionStepCount,
   sectionStepOrdinal,
   stepLabel,
@@ -499,7 +500,7 @@ export function MainPlayer({ playerConfig, onPlayerEvent }: MainPlayerProps) {
     onPlayerEvent?.({ type: 'quizEnd', summary });
     const durationMs = telemetryStartRef.current != null ? Date.now() - telemetryStartRef.current : 0;
     const starttime = telemetryStartRef.current ?? Date.now();
-    logAssessmentEnd(globalQuestionNumber, overview.totalQuestions, durationMs, summary.totalScore);
+    logAssessmentEnd(currentGlobalQuestionNumber, overview.totalQuestions, durationMs, summary.totalScore);
     logSummary(
       {
         correct: summary.correct,
@@ -508,7 +509,7 @@ export function MainPlayer({ playerConfig, onPlayerEvent }: MainPlayerProps) {
         skipped: summary.skipped,
         score: summary.totalScore,
       },
-      { currentQuestionIndex: globalQuestionNumber, totalQuestions: overview.totalQuestions, starttime },
+      { currentQuestionIndex: currentGlobalQuestionNumber, totalQuestions: overview.totalQuestions, starttime },
     );
     // Angular parity (viewer-service.ts raiseSummaryEvent → qumlPlayerEvent.emit
     // with eid:'QUML_SUMMARY') — the portal's course-completion tracking
@@ -600,7 +601,15 @@ export function MainPlayer({ playerConfig, onPlayerEvent }: MainPlayerProps) {
 
   // Angular parity (section-player.component.ts:898, eventName.goToQuestion).
   const handleQuestionJump = (sectionIndex: number, questionIndex: number) => {
-    logInteraction('go_to_question', sectionIndex);
+    // Report the question being opened, not merely its section: the sidebar
+    // now emits real per-question jumps, so a section index would collapse
+    // every jump within one section to the same pageid. Computed from the
+    // arguments because the setCurrentSection/setCurrentQuestion calls below
+    // have not taken effect yet.
+    logInteraction(
+      'go_to_question',
+      globalQuestionNumber(state.sections, sectionIndex, questionIndex),
+    );
     setCurrentSection(sectionIndex);
     setCurrentQuestion(questionIndex);
     setStage('assessment');
@@ -663,10 +672,11 @@ export function MainPlayer({ playerConfig, onPlayerEvent }: MainPlayerProps) {
   const currentSection = state.sections[state.currentSectionIndex];
 
   // Global question counter (across all sections) for the shell header.
-  const priorQuestions = state.sections
-    .slice(0, state.currentSectionIndex)
-    .reduce((n, s) => n + s.children.length, 0);
-  const globalQuestionNumber = priorQuestions + state.currentQuestionIndex + 1;
+  const currentGlobalQuestionNumber = globalQuestionNumber(
+    state.sections,
+    state.currentSectionIndex,
+    state.currentQuestionIndex,
+  );
 
   let content: ReactNode;
   if (stage === 'overview' && skipStartPage && !autoStartedRef.current) {
@@ -779,11 +789,11 @@ export function MainPlayer({ playerConfig, onPlayerEvent }: MainPlayerProps) {
           answers={state.answers}
           timeRemaining={overview.showTimer ? timeRemaining : null}
           timeElapsed={overview.showTimer && overview.timeLimit === 0 ? timeElapsed : null}
-          questionNumber={globalQuestionNumber}
+          questionNumber={currentGlobalQuestionNumber}
           totalQuestions={overview.totalQuestions}
           onSubmit={handleSubmitAssessment}
           onReview={handleReviewBeforeSubmit}
-          reviewAvailable={globalQuestionNumber === overview.totalQuestions}
+          reviewAvailable={currentGlobalQuestionNumber === overview.totalQuestions}
           onMenuClick={() => setDrawerOpen(true)}
           onBrandClick={() => setStage('overview')}
           sectionLabel={sectionLabel}

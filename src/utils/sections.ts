@@ -24,6 +24,27 @@ export function expandsPerQuestion(section: Section, sections: Section[]): boole
 }
 
 /**
+ * 1-based position of a question across the WHOLE assessment — question 7 of
+ * 31, counting straight through every section.
+ *
+ * Derived from an explicit (sectionIndex, questionIndex) rather than current
+ * state, so it can be computed for a question the player has not moved to yet.
+ * A navigation handler runs before its own setCurrentSection/setCurrentQuestion
+ * take effect, so reading the current position there would report the question
+ * being left rather than the one being opened.
+ */
+export function globalQuestionNumber(
+  sections: Section[],
+  sectionIndex: number,
+  questionIndex: number,
+): number {
+  const prior = sections
+    .slice(0, Math.max(0, sectionIndex))
+    .reduce((n, s) => n + s.children.length, 0);
+  return prior + questionIndex + 1;
+}
+
+/**
  * Display label for a zero-based position in the section/question sequence.
  *
  * Numbered rather than lettered: the sequence now takes one place per

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { QumlProvider } from '../../context/QumlContext';
+import { subscribeTelemetry, clearEventQueue } from '../../services/telemetry-service';
 import { MainPlayer } from './MainPlayer';
 import type { PlayerConfig } from '../../types';
 
@@ -141,5 +142,38 @@ describe('MainPlayer overview — SECTIONS count with root-level questions', () 
     expect(stat(container, 'sections')).toBe('1');
     // ...and one overview card, not thirty.
     expect(container.querySelectorAll('[class*="sectionCard"]')).toHaveLength(1);
+  });
+});
+
+// `go_to_question` previously reported the SECTION index, so every per-question
+// jump within one section emitted an identical pageid — the event named itself
+// after a question while being unable to identify one.
+describe('go_to_question telemetry', () => {
+  it('reports the question being opened, across sections', async () => {
+    clearEventQueue();
+    const events: { eid: string; edata?: { id?: string; pageid?: string } }[] = [];
+    const unsub = subscribeTelemetry((e) => events.push(e as never));
+
+    render(
+      <QumlProvider playerConfig={cfg}>
+        <MainPlayer playerConfig={cfg} />
+      </QumlProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /start assessment/i }));
+
+    const jumped = () =>
+      events.filter((e) => e.eid === 'INTERACT' && e.edata?.id === 'go_to_question');
+    const before = jumped().length;
+
+    // Section A holds 2 questions, so its second question is #2 overall and the
+    // two root-level questions that follow are #3 and #4.
+    fireEvent.click(screen.getByRole('button', { name: /maths/i }));
+
+    const latest = jumped()[jumped().length - 1];
+    expect(jumped().length).toBeGreaterThan(before);
+    // 'maths' is the last of 4 questions — NOT its section index, and not the
+    // question that was current when the click was handled.
+    expect(latest.edata?.pageid).toBe('4');
+    unsub();
   });
 });
