@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { t, readI18n } from '../../i18n/translations';
 import { TimerIcon, MenuIcon } from '../icons';
 import { isAnswered } from '../../utils/answered';
+import { expandsPerQuestion } from '../../utils/sections';
 import type { Section, AnswersMap } from '../../types';
 import styles from './PlayerHeader.module.scss';
 
@@ -122,19 +123,23 @@ export function PlayerHeader({
         <ol className={styles.steps} aria-label={t(language, 'SECTIONS')}>
           {(() => {
             // A real, authored section contributes one step. A section
-            // synthesized to hold root-level questions with no Section
-            // wrapper (isImplicitSection) isn't a section at all — each of
-            // its questions is its own step instead, a sibling in the same
-            // A/B/C… sequence as section cards, same as the Sidebar.
+            // synthesized to hold root-level questions isn't a section at
+            // all — alongside real sections each of its questions becomes its
+            // own step, a sibling in the same A/B/C… sequence as section
+            // cards (same as the Sidebar). A FLAT set has no real sections to
+            // sit alongside, so its single group stays one step.
             type Step = { key: string; title: string; active: boolean; completed: boolean };
             const steps: Step[] = [];
 
             sections.forEach((section, sectionIndex) => {
-              if (section.isImplicitSection) {
+              if (expandsPerQuestion(section, sections)) {
                 section.children.forEach((question, questionIndex) => {
                   steps.push({
                     key: question.identifier,
-                    title: question.name || readI18n(section.name, language),
+                    // Never fall back to the implicit section's own name: it
+                    // is the questionset's name, so an unnamed question would
+                    // be titled after the whole assessment.
+                    title: question.name || `${t(language, 'QUESTION')} ${questionIndex + 1}`,
                     active: sectionIndex === currentSectionIndex && questionIndex === currentQuestionIndex,
                     completed: isAnswered(answers[question.identifier]),
                   });

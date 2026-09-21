@@ -23,6 +23,7 @@ import {
 import { QumlApiError } from '../../types/api';
 import { calculateScore } from '../../registry/scoring-registry';
 import { isAnswered } from '../../utils/answered';
+import { expandsPerQuestion, sectionStepCount, sectionStepOrdinal } from '../../utils/sections';
 import type { Question, Section, PlayerConfig, I18nValue } from '../../types';
 import styles from './MainPlayer.module.scss';
 
@@ -213,13 +214,24 @@ export function MainPlayer({ playerConfig, onPlayerEvent }: MainPlayerProps) {
     const pathPrefix =
       (typeof cfg.apiSlug === 'string' ? cfg.apiSlug : undefined) ??
       (typeof cfg.slug === 'string' ? cfg.slug : undefined);
-    // Draft (`?mode=edit`) content is for authoring previews only. `config.mode`
-    // is the editor's own edit/review/read state ('edit' | 'review' | 'read' |
-    // 'orgreview' | 'sourcingreview'), forwarded unmodified into the player's
-    // config by the editor host — so its presence marks an authoring context.
-    // The portal (real learner delivery) never sets it, so learners correctly
-    // get Live/published content only.
-    const previewMode = Boolean(cfg.mode);
+    // Draft (`?mode=edit`) content is for authoring previews only.
+    //
+    // Matched against an explicit allow-list rather than "any truthy mode":
+    // `config` is an open record, and hosts commonly pass `mode: 'play'` — which
+    // under a truthiness test would put learners back on unpublished Draft
+    // content, the exact leak this guard exists to prevent.
+    //
+    // Both `config.mode` (what the editor host forwards into the player config)
+    // and `context.mode` (where this repo otherwise reads mode from — see
+    // telemetry-service's `mode: context.mode`) are honoured, because an editor
+    // that sets only the latter would otherwise silently lose draft preview —
+    // and for a questionset that has never been published there is no Live node
+    // at all, so the fetch would fail outright.
+    const AUTHORING_MODES = ['edit', 'review', 'read', 'orgreview', 'sourcingreview'];
+    const isAuthoringMode = (m: unknown) =>
+      typeof m === 'string' && AUTHORING_MODES.includes(m.toLowerCase());
+    const previewMode =
+      isAuthoringMode(cfg.mode) || isAuthoringMode(playerConfig.context?.mode);
 
     setLoading(true);
     try {
@@ -282,14 +294,13 @@ export function MainPlayer({ playerConfig, onPlayerEvent }: MainPlayerProps) {
       (n, s) => n + s.children.reduce((m, q) => m + (q.maxScore ?? 1), 0),
       0,
     );
-    // A real section counts as one; a section synthesized to hold root-level
-    // questions (no authored Section wrapper) isn't a section at all — each
-    // of its questions counts as its own step instead, same as the Sidebar/
-    // Header's lettered sequence (A = section, B = loose question, C = ...).
-    const totalSections = state.sections.reduce(
-      (n, s) => n + (s.isImplicitSection ? s.children.length : 1),
-      0,
-    );
+    // A real section counts as one. A section synthesized to hold root-level
+    // questions isn't a section at all — alongside real sections each of its
+    // questions counts as its own step (A = section, B = loose question,
+    // C = ...). In a FLAT set there are no real sections to sit alongside, so
+    // the single group counts as one; expanding it would report e.g.
+    // "SECTIONS 30" for a questionset with no sections at all.
+    const totalSections = sectionStepCount(state.sections);
     const timeLimits = (data.timeLimits as { questionSet?: { max?: number } } | undefined)
       ?.questionSet;
     return {
@@ -717,8 +728,8 @@ export function MainPlayer({ playerConfig, onPlayerEvent }: MainPlayerProps) {
         <SectionIntro
           key={`intro-${state.currentSectionIndex}`}
           section={currentSection}
-          sectionIndex={state.currentSectionIndex}
-          totalSections={state.sections.length}
+          sectionIndex={sectionStepOrdinal(state.sections, state.currentSectionIndex)}
+          totalSections={sectionStepCount(state.sections)}
           onBegin={handleBegin}
           onPrevious={() => setStage('overview')}
           language={language}

@@ -94,7 +94,11 @@ describe('PlayerHeader', () => {
     expect(steps[2]).toHaveAttribute('title', 'maths');
   });
 
-  it('fully flat layout: gives each root-level question its own step when no real section exists', () => {
+  // Expanding per-question exists so root-level questions can take their place
+  // in the sequence ALONGSIDE real sections. A flat set has none to sit
+  // alongside, so its single group stays one step — otherwise a 30-question
+  // flat set would render 30 header dots for a set with no sections at all.
+  it('fully flat layout: keeps the single group as one step', () => {
     render(
       <PlayerHeader
         {...baseProps}
@@ -104,12 +108,28 @@ describe('PlayerHeader', () => {
         answers={{ rq1: { value: 0 } }}
       />,
     );
-    // No real section at all → one step per question.
     const steps = screen.getAllByRole('listitem');
-    expect(steps).toHaveLength(2);
+    expect(steps).toHaveLength(1);
     expect(steps[0]).toHaveTextContent('A');
-    expect(steps[1]).toHaveTextContent('B');
-    expect(steps[0]).toHaveAttribute('title', 'test');
-    expect(steps[1]).toHaveAttribute('title', 'maths');
+  });
+
+  // Regression guard for the mislabel this PR fixes: an implicit section's
+  // `name` is the questionset's own name, so it must never be used as the
+  // fallback title for an unnamed root-level question.
+  it('titles an unnamed root-level question positionally, not after the questionset', () => {
+    const unnamed: Section = {
+      ...mkSection('root'),
+      name: 'Qwert-test', // the questionset's own name
+      isImplicitSection: true,
+      children: [
+        { identifier: 'rq1', body: '', primaryCategory: 'multiple choice question', maxScore: 1 },
+      ],
+    };
+    render(
+      <PlayerHeader {...baseProps} sections={[mkSection('a'), unnamed]} completed={[false, false]} />,
+    );
+    const steps = screen.getAllByRole('listitem');
+    expect(steps[1]).toHaveAttribute('title', 'Question 1');
+    expect(steps[1]).not.toHaveAttribute('title', 'Qwert-test');
   });
 });

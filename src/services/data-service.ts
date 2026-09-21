@@ -159,10 +159,21 @@ const IMPLICIT_SECTION_INHERITED_KEYS = [
   'metadata',
 ] as const;
 
-/** Build a synthetic section node wrapping a run of root-level question stubs. */
+/**
+ * Build a synthetic section node wrapping a run of root-level question stubs.
+ *
+ * Carries the questionset's OWN identifier rather than a fabricated one. These
+ * questions really do sit at the root, and the id does not stay internal — it
+ * becomes `MediaResolveContext.sectionId`, which `utils/media.ts` uses to build
+ * offline asset paths (`{basePath}/{sectionId}/{questionId}/{src}`), and it is
+ * reported as `sectionId` on RESPONSE/ASSESS telemetry. A synthesized id would
+ * point downloaded content at a directory that does not exist (images would
+ * silently fail to load) and would put ids into analytics that exist nowhere in
+ * the content graph. The fully-flat branch in `extractSectionNodes` already
+ * keeps the root identifier; this keeps the two consistent.
+ */
 function wrapImplicitSection(
   questionSet: RawQuestionSet,
-  runIndex: number,
   run: RawQuestionSetChild[],
 ): RawQuestionSetChild {
   const inherited: Record<string, unknown> = {};
@@ -171,7 +182,7 @@ function wrapImplicitSection(
   }
   return {
     ...inherited,
-    identifier: `${questionSet.identifier}_implicit_${runIndex}`,
+    identifier: questionSet.identifier,
     objectType: 'QuestionSet',
     name: questionSet.name,
     isImplicitSection: true,
@@ -203,7 +214,6 @@ function extractSectionNodes(questionSet: RawQuestionSet): RawQuestionSetChild[]
   // Mixed layout: walk children in order, grouping consecutive loose
   // questions into implicit sections interleaved with the real ones.
   const nodes: RawQuestionSetChild[] = [];
-  let runIndex = 0;
   for (let i = 0; i < children.length; ) {
     if (children[i].objectType !== 'Question') {
       nodes.push(children[i]);
@@ -215,8 +225,7 @@ function extractSectionNodes(questionSet: RawQuestionSet): RawQuestionSetChild[]
       run.push(children[i]);
       i += 1;
     }
-    nodes.push(wrapImplicitSection(questionSet, runIndex, run));
-    runIndex += 1;
+    nodes.push(wrapImplicitSection(questionSet, run));
   }
   return nodes;
 }

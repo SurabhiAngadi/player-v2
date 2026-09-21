@@ -198,4 +198,30 @@ describe('flat and mixed root layouts', () => {
       'q3',
     ]);
   });
+
+  it('gives a synthesized group the questionset\'s own identifier, not a fabricated one', () => {
+    // The id does not stay internal: it becomes MediaResolveContext.sectionId,
+    // which utils/media.ts uses to build offline asset paths
+    // ({basePath}/{sectionId}/{questionId}/{src}), and is reported as sectionId
+    // on RESPONSE/ASSESS telemetry. A fabricated "<root>_implicit_0" would point
+    // downloaded content at a directory that does not exist (images silently
+    // fail) and put non-existent ids into analytics.
+    const mixed = {
+      identifier: 'do_mixed',
+      name: 'Mixed set',
+      objectType: 'QuestionSet',
+      children: [
+        question('q1', 1),
+        { identifier: 'do_section', name: 'Section A', objectType: 'QuestionSet', children: [question('q2', 1)] },
+        question('q3', 1),
+      ],
+    };
+    const sections = transformEmbeddedQuestionSet(mixed);
+    const implicit = sections.filter((s) => s.isImplicitSection);
+    expect(implicit).toHaveLength(2);
+    for (const s of implicit) {
+      expect(s.identifier).toBe('do_mixed');
+      expect(s.identifier).not.toMatch(/_implicit_/);
+    }
+  });
 });

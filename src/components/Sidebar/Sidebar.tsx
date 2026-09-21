@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { t, readI18n } from '../../i18n/translations';
 import { isAnswered } from '../../utils/answered';
 import { ChevronRightIcon } from '../icons';
+import { expandsPerQuestion } from '../../utils/sections';
 import type { Section, Question, AnswersMap } from '../../types';
 import styles from './Sidebar.module.scss';
 
@@ -135,13 +136,15 @@ export function Sidebar({
       <ul className={styles.list}>
         {sections.map((section, sectionIndex) => {
           // Implicit section (root-level questions, no authored Section wrapper):
-          // no header, no collapse — each question is its own top-level step,
-          // continuing the same A/B/C… sequence as section cards, rather than
-          // a child of one.
+          // no header, no collapse — each question is a top-level row rather
+          // than a child of a section. Alongside real sections it also takes
+          // its own place in the A/B/C… sequence; in a FLAT set there are no
+          // real sections to sequence against, so the rows carry no letter.
           if (section.isImplicitSection) {
+            const lettered = expandsPerQuestion(section, sections);
             return section.children.map((question, qIndex) => {
-              const letter = String.fromCharCode(65 + letterOrdinal);
-              letterOrdinal += 1;
+              const letter = lettered ? String.fromCharCode(65 + letterOrdinal) : undefined;
+              if (lettered) letterOrdinal += 1;
               return (
                 <QuestionRow
                   key={question.identifier}

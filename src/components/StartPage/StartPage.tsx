@@ -9,6 +9,7 @@ import {
   ShieldIcon,
   PreviousIcon,
 } from '../icons';
+import { expandsPerQuestion } from '../../utils/sections';
 import type { Section } from '../../types';
 import { useIsCompactViewport } from './useIsCompactViewport';
 import styles from './StartPage.module.scss';
@@ -27,9 +28,6 @@ import styles from './StartPage.module.scss';
  * screen needs to scroll on a short/narrow viewport. This is the one bit of
  * local UI state in this component; it never reaches Context or the parent.
  */
-
-/** Section cards only show a letter badge for the first few sections. */
-const MAX_BADGED_SECTIONS = 4;
 
 export interface StartPageProps {
   title: string;
@@ -162,14 +160,16 @@ export function StartPage({
 
             <div className={styles.grid}>
               {(() => {
-                // A real section gets one card; a section synthesized to hold
-                // root-level questions with no authored Section wrapper
-                // (isImplicitSection) isn't a section at all — each of its
-                // questions gets its own card instead, a sibling in the same
-                // lettered sequence as section cards, same as the Sidebar/Header.
+                // A real section gets one card. A section synthesized to hold
+                // root-level questions isn't a section at all — alongside real
+                // sections each of its questions gets its own card, a sibling
+                // in the same lettered sequence (same as Sidebar/Header). A
+                // FLAT set has no real sections to sit alongside, so its single
+                // group stays one card rather than becoming one card per
+                // question.
                 let letterOrdinal = 0;
                 return sections.map((section, sectionIndex) => {
-                  if (section.isImplicitSection) {
+                  if (expandsPerQuestion(section, sections)) {
                     return section.children.map((question, qIndex) => {
                       const ordinal = letterOrdinal;
                       letterOrdinal += 1;
@@ -185,11 +185,9 @@ export function StartPage({
                             : {})}
                         >
                           <div className={styles.cardTop}>
-                            {ordinal < MAX_BADGED_SECTIONS && (
-                              <span className={styles.badge} aria-hidden="true">
-                                {String.fromCharCode(65 + ordinal)}
-                              </span>
-                            )}
+                            <span className={styles.badge} aria-hidden="true">
+                              {String.fromCharCode(65 + ordinal)}
+                            </span>
                             <span className={styles.cardName}>{qName}</span>
                             {questionSelectable && (
                               <ChevronRightIcon size={18} className={styles.cardChevron} />
@@ -219,11 +217,9 @@ export function StartPage({
                         : {})}
                     >
                       <div className={styles.cardTop}>
-                        {ordinal < MAX_BADGED_SECTIONS && (
-                          <span className={styles.badge} aria-hidden="true">
-                            {String.fromCharCode(65 + ordinal)}
-                          </span>
-                        )}
+                        <span className={styles.badge} aria-hidden="true">
+                          {String.fromCharCode(65 + ordinal)}
+                        </span>
                         <span className={styles.cardName}>{name}</span>
                         {sectionSelectable && (
                           <ChevronRightIcon size={18} className={styles.cardChevron} />

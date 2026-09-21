@@ -328,3 +328,89 @@ export const sampleConfig: PlayerConfig = {
     ],
   },
 };
+
+// ── Root-level question fixtures (DEV-ONLY) ─────────────────────────────────
+//
+// `sampleConfig` above supplies `data.sections` — already-shaped Section
+// objects, which MainPlayer consumes directly. These two fixtures instead
+// supply a RAW hierarchy under `metadata`, so they flow through
+// `transformEmbeddedQuestionSet` → `extractSectionNodes` and genuinely
+// exercise the flat/mixed branches rather than bypassing them.
+//
+//   ?sample=flat   — questions at the root, NO authored section anywhere.
+//                    Must render ONE group: SECTIONS 1, one overview card.
+//                    (Expanding it per-question would report "SECTIONS 8".)
+//   ?sample=mixed  — real sections AND root-level questions. Each loose
+//                    question takes its own place in the A/B/C… sequence.
+
+const devQuestion = (identifier: string, name: string, index: number) => ({
+  identifier,
+  name,
+  objectType: 'Question',
+  primaryCategory: 'Multiple Choice Question',
+  qType: 'MCQ',
+  index,
+  maxScore: 1,
+  body: `<p>${name}</p>`,
+  interactions: {
+    response1: {
+      type: 'choice',
+      options: [
+        { label: { en: 'Option A' }, value: 0 },
+        { label: { en: 'Option B' }, value: 1 },
+      ],
+    },
+  },
+  responseDeclaration: {
+    response1: { cardinality: 'single', type: 'integer', correctResponse: { value: 0 } },
+  },
+});
+
+const devSection = (identifier: string, name: string, index: number, children: unknown[]) => ({
+  identifier,
+  name,
+  objectType: 'QuestionSet',
+  primaryCategory: 'Practice Question Set',
+  visibility: 'Parent',
+  index,
+  children,
+});
+
+const devConfig = (metadata: Record<string, unknown>): PlayerConfig => ({
+  context: { uid: 'dev-user', sid: 'dev-session', channel: 'dev' },
+  config: { language: 'en' },
+  metadata,
+  data: {},
+});
+
+/** FLAT: 8 questions at the root, no sections at all. */
+export const flatSampleConfig: PlayerConfig = devConfig({
+  identifier: 'do_dev_flat',
+  name: 'Flat Set (no sections)',
+  description: 'Every question sits at the root — there is no authored section.',
+  objectType: 'QuestionSet',
+  timeLimits: { questionSet: { max: 0, min: 0 } },
+  children: Array.from({ length: 8 }, (_, i) =>
+    devQuestion(`do_dev_flat_q${i + 1}`, `Root question ${i + 1}`, i + 1),
+  ),
+});
+
+/** MIXED: sections and root-level questions interleaved. */
+export const mixedSampleConfig: PlayerConfig = devConfig({
+  identifier: 'do_dev_mixed',
+  name: 'Mixed Set (sections + root questions)',
+  description: 'Root-level questions sit alongside authored sections.',
+  objectType: 'QuestionSet',
+  timeLimits: { questionSet: { max: 0, min: 0 } },
+  children: [
+    devSection('do_dev_mixed_secA', 'Knowledge Check', 1, [
+      devQuestion('do_dev_mixed_a1', 'Section A · question 1', 1),
+      devQuestion('do_dev_mixed_a2', 'Section A · question 2', 2),
+    ]),
+    devQuestion('do_dev_mixed_loose1', 'Loose question one', 2),
+    devQuestion('do_dev_mixed_loose2', 'Loose question two', 3),
+    devSection('do_dev_mixed_secB', 'Concepts & Recall', 4, [
+      devQuestion('do_dev_mixed_b1', 'Section B · question 1', 1),
+    ]),
+  ],
+});

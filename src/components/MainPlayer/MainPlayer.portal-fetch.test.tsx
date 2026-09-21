@@ -124,6 +124,50 @@ describe('MainPlayer — full portal path (shallow metadata → /portal fetch �
   // The editor forwards its own edit/review/read state on `config.mode`; that
   // marks an authoring context and opts the fetch into the Draft working copy,
   // preserving editor preview of unpublished questionsets.
+  // 'play' is a common Sunbird convention and is NOT an authoring mode. Under a
+  // truthiness check it would opt learners into the Draft copy — reintroducing
+  // the exact leak previewMode exists to prevent.
+  it.each(['play', 'preview', 'default', ''])(
+    'does NOT request draft content for non-authoring mode "%s"',
+    async (mode) => {
+      mockGet.mockResolvedValue(hierarchy);
+      mockPost.mockResolvedValue({ questions });
+      const playCfg: PlayerConfig = { ...cfg, config: { language: 'en', mode } };
+
+      render(
+        <QumlProvider playerConfig={playCfg}>
+          <MainPlayer playerConfig={playCfg} />
+        </QumlProvider>,
+      );
+
+      await waitFor(() => expect(mockGet).toHaveBeenCalled());
+      expect(mockGet.mock.calls[0][0]).not.toContain('mode=edit');
+    },
+  );
+
+  // This repo reads the mode from `context` elsewhere (telemetry-service's
+  // `mode: context.mode`), so an editor host that sets only context.mode must
+  // still get draft preview — otherwise a never-published questionset has no
+  // Live node to fall back on and the load fails outright.
+  it('requests draft content when the authoring mode is on context, not config', async () => {
+    mockGet.mockResolvedValue(hierarchy);
+    mockPost.mockResolvedValue({ questions });
+    const ctxCfg: PlayerConfig = { ...cfg, context: { mode: 'edit' }, config: { language: 'en' } };
+
+    render(
+      <QumlProvider playerConfig={ctxCfg}>
+        <MainPlayer playerConfig={ctxCfg} />
+      </QumlProvider>,
+    );
+
+    await waitFor(() =>
+      expect(mockGet).toHaveBeenCalledWith(
+        '/portal/questionset/v2/hierarchy/do_qs?mode=edit',
+        expect.anything(),
+      ),
+    );
+  });
+
   it.each(['edit', 'review', 'read', 'orgreview', 'sourcingreview'])(
     'requests the draft working copy for editor mode "%s"',
     async (mode) => {

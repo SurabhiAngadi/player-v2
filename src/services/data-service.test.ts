@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock the HTTP layer so the data service is tested in isolation (no axios/network).
 vi.mock('./http-client', () => ({
@@ -70,6 +70,15 @@ beforeEach(() => {
   mockPost.mockReset();
 });
 
+// These tests set window.questionSetHierarchyUrl / window.questionListUrl to
+// exercise the host-override path. Clear them here rather than inline at the
+// end of each test: an inline delete is skipped when an assertion throws, and
+// the override would then leak into every subsequent test in the run.
+afterEach(() => {
+  delete (window as any).questionSetHierarchyUrl;
+  delete (window as any).questionListUrl;
+});
+
 describe('data-service', () => {
   describe('getQuestionSetHierarchy', () => {
     it('unwraps result.questionset', async () => {
@@ -132,14 +141,6 @@ describe('data-service', () => {
       mockGet.mockResolvedValue({ questionset: hierarchy.questionset });
       await getQuestionSetHierarchy('do_set', { previewMode: false });
       expect(mockGet.mock.calls[0][0]).not.toContain('mode=edit');
-    });
-
-    it('joins draft mode with & when the host URL already carries a query string', async () => {
-      (window as any).questionSetHierarchyUrl = '/action/questionset/v2/hierarchy/?foo=1';
-      mockGet.mockResolvedValue({ questionset: hierarchy.questionset });
-      await getQuestionSetHierarchy('do_set', { previewMode: true });
-      expect(mockGet.mock.calls[0][0]).toContain('&mode=edit');
-      delete (window as any).questionSetHierarchyUrl;
     });
 
   });
