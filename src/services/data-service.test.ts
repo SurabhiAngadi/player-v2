@@ -143,6 +143,33 @@ describe('data-service', () => {
       expect(mockGet.mock.calls[0][0]).not.toContain('mode=edit');
     });
 
+    // A host-supplied URL may already carry a query string (e.g. a gateway
+    // token). The identifier belongs on the PATH — appending it blindly put it
+    // inside the query, as `/hierarchy/?foo=1/do_set`, where it became part of
+    // `foo`'s value instead of identifying the questionset.
+    it('appends the identifier to the path when the host URL carries a query string', async () => {
+      (window as any).questionSetHierarchyUrl = '/action/questionset/v2/hierarchy/?foo=1';
+      mockGet.mockResolvedValue({ questionset: hierarchy.questionset });
+      await getQuestionSetHierarchy('do_set');
+      expect(mockGet.mock.calls[0][0]).toBe('/action/questionset/v2/hierarchy/do_set?foo=1');
+    });
+
+    it('joins mode=edit with & onto a host URL that already has a query', async () => {
+      (window as any).questionSetHierarchyUrl = '/action/questionset/v2/hierarchy/?foo=1';
+      mockGet.mockResolvedValue({ questionset: hierarchy.questionset });
+      await getQuestionSetHierarchy('do_set', { previewMode: true });
+      expect(mockGet.mock.calls[0][0]).toBe(
+        '/action/questionset/v2/hierarchy/do_set?foo=1&mode=edit',
+      );
+    });
+
+    it('handles a host URL with no trailing slash and no query', async () => {
+      (window as any).questionSetHierarchyUrl = '/action/questionset/v2/hierarchy';
+      mockGet.mockResolvedValue({ questionset: hierarchy.questionset });
+      await getQuestionSetHierarchy('do_set');
+      expect(mockGet.mock.calls[0][0]).toBe('/action/questionset/v2/hierarchy/do_set');
+    });
+
   });
 
   describe('getQuestions', () => {
@@ -161,6 +188,14 @@ describe('data-service', () => {
         { request: { search: { identifier: ['q1', 'q2'] } } },
         { baseURL: 'https://host' },
       );
+    });
+
+    // `?lang=` on a URL that already has a query would emit a second `?`.
+    it('joins lang with & when the host list URL already has a query', async () => {
+      (window as any).questionListUrl = '/action/question/v2/list?foo=1';
+      mockPost.mockResolvedValue({ questions });
+      await getQuestions(['q1'], { language: 'fr' });
+      expect(mockPost.mock.calls[0][0]).toBe('/action/question/v2/list?foo=1&lang=fr');
     });
 
     it('honors a host-provided window.questionListUrl override', async () => {

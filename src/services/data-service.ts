@@ -80,6 +80,28 @@ function hostEndpoint(key: 'questionListUrl' | 'questionSetHierarchyUrl'): strin
   return typeof val === 'string' && val ? val : undefined;
 }
 
+/**
+ * Append a path segment to a base URL that may already carry a query string.
+ *
+ * `window.questionSetHierarchyUrl` is host-supplied, so it can arrive with one
+ * (e.g. a gateway token). Naive concatenation put the identifier *inside* the
+ * query — `/hierarchy/?foo=1/do_x` — making it part of `foo`'s value rather
+ * than part of the path. The query is split off, the segment joined to the
+ * path, then the query re-attached.
+ */
+function appendPathSegment(base: string, segment: string): string {
+  const queryAt = base.indexOf('?');
+  const path = queryAt === -1 ? base : base.slice(0, queryAt);
+  const query = queryAt === -1 ? '' : base.slice(queryAt);
+  const joined = path.endsWith('/') ? `${path}${segment}` : `${path}/${segment}`;
+  return `${joined}${query}`;
+}
+
+/** Add a query param, joining with `&` when the URL already has a query. */
+function withQueryParam(url: string, param: string): string {
+  return `${url}${url.includes('?') ? '&' : '?'}${param}`;
+}
+
 /** Fetch the raw questionset hierarchy (`result.questionset`). */
 export async function getQuestionSetHierarchy(
   identifier: string,
@@ -91,17 +113,12 @@ export async function getQuestionSetHierarchy(
   const base =
     hostEndpoint('questionSetHierarchyUrl') ??
     `${apiPrefix(opts.pathPrefix)}${ApiPaths.questionSetHierarchy}`;
-  // Base ends with `/` (identifier appended); tolerate a host value without one.
-  const path = base.endsWith('/') ? `${base}${identifier}` : `${base}/${identifier}`;
+  const path = appendPathSegment(base, identifier);
   // `mode=edit` makes the backend return the Draft/.img working copy over the
   // Live node, so it is opt-in for authoring previews only (see
   // LoadOptions.previewMode). Learner delivery falls through to the plain
   // path and therefore only ever sees published content.
-  const url = opts.previewMode
-    ? path.includes('?')
-      ? `${path}&mode=edit`
-      : `${path}?mode=edit`
-    : path;
+  const url = opts.previewMode ? withQueryParam(path, 'mode=edit') : path;
   const result = await httpGet<QuestionSetHierarchyResult>(url, { baseURL: opts.baseUrl });
   if (!result?.questionset) {
     throw new QumlApiError('invalid', 'Hierarchy response missing `questionset`');
@@ -124,7 +141,9 @@ export async function getQuestions(
   if (!identifiers || identifiers.length === 0) return [];
   const listBase =
     hostEndpoint('questionListUrl') ?? `${apiPrefix(opts.pathPrefix)}${ApiPaths.questionList}`;
-  const url = opts.language ? `${listBase}?lang=${opts.language}` : listBase;
+  // Same reasoning as appendPathSegment: a host-supplied list URL may already
+  // carry a query, and a bare `?lang=` would then emit a second `?`.
+  const url = opts.language ? withQueryParam(listBase, `lang=${opts.language}`) : listBase;
 
   const chunks: string[][] = [];
   for (let i = 0; i < identifiers.length; i += QUESTION_BATCH_SIZE) {
