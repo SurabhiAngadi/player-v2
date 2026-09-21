@@ -88,7 +88,7 @@ describe('StartPage', () => {
     ];
 
     it('gives each root-level question its own card instead of one lumped, mislabeled card', () => {
-      render(
+      const { container } = render(
         <StartPage
           {...baseProps}
           sections={implicitSections}
@@ -101,10 +101,13 @@ describe('StartPage', () => {
       // Each root-level question gets its own card, by its own title.
       expect(screen.getByText('test')).toBeInTheDocument();
       expect(screen.getByText('maths')).toBeInTheDocument();
-      // Lettered continuously with the real section: A, B, C.
-      expect(screen.getByText('A')).toBeInTheDocument();
-      expect(screen.getByText('B')).toBeInTheDocument();
-      expect(screen.getByText('C')).toBeInTheDocument();
+      // Numbered continuously with the real section: 1, 2, 3. Read off the
+      // cards themselves — the stat tiles are numbers too, so a document-wide
+      // getByText would be ambiguous.
+      const badges = Array.from(container.querySelectorAll('[class*="sectionCard"]')).map(
+        (c) => c.querySelector('[class*="badge"]')?.textContent,
+      );
+      expect(badges).toEqual(['1', '2', '3']);
     });
 
     it('jumps straight to a root-level question via onQuestionSelect', () => {

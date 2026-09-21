@@ -109,7 +109,7 @@ describe('Sidebar', () => {
     expect(onQuestionJump).toHaveBeenCalledWith(0, 1);
   });
 
-  it('renders an implicit section\'s questions as flat items, each with its own letter continuing the section sequence', () => {
+  it('renders an implicit section\'s questions as flat items, each numbered into the section sequence', () => {
     render(
       <Sidebar
         sections={implicitSections}
@@ -125,10 +125,10 @@ describe('Sidebar', () => {
     // Its question renders as a flat item, by its own title.
     expect(screen.getByText('Root question')).toBeInTheDocument();
     // implicitSections = [implicit (1 question), real section] — the loose
-    // question is the first top-level step (A), so the real section that
-    // follows it is B, not A.
-    expect(screen.getByText('A')).toBeInTheDocument(); // the loose question's badge
-    expect(screen.getByText('B')).toBeInTheDocument(); // the real section's badge
+    // question is the first top-level step (1), so the real section that
+    // follows it is 2, not 1.
+    expect(screen.getByText('1')).toBeInTheDocument(); // the loose question's badge
+    expect(screen.getByText('2')).toBeInTheDocument(); // the real section's badge
   });
 
   it('jumps straight to a loose (implicit-section) question', () => {
@@ -232,7 +232,7 @@ describe('Sidebar', () => {
     expect(screen.getByRole('button', { name: /Question 2/i })).toBeInTheDocument();
   });
 
-  it('renders no icon or position number on a question nested under a real section', () => {
+  it('renders no icon or badge on a question nested under a real section', () => {
     const { container } = render(
       <Sidebar
         sections={sections}
@@ -244,8 +244,10 @@ describe('Sidebar', () => {
       />,
     );
     expect(container.querySelectorAll('.icon-question-mark')).toHaveLength(0);
-    // Nested sub-items have no letter badge of their own — only the plain label.
-    expect(screen.queryByText('1')).not.toBeInTheDocument();
-    expect(screen.queryByText('2')).not.toBeInTheDocument();
+    // Nested sub-items carry no badge of their own — the section's own badge
+    // already covers them. Scoped to the row: top-level section badges are
+    // numbers too, so a document-wide query would match those instead.
+    const subItem = screen.getByRole('button', { name: /Question 2/i });
+    expect(subItem.querySelector('[class*="badge"]')).toBeNull();
   });
 });

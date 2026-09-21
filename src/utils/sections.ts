@@ -24,8 +24,22 @@ export function expandsPerQuestion(section: Section, sections: Section[]): boole
 }
 
 /**
- * Total number of entries in the A/B/C… sequence — the value shown as the
- * "SECTIONS" stat, and the denominator in "Section C of 4".
+ * Display label for a zero-based position in the section/question sequence.
+ *
+ * Numbered rather than lettered: the sequence now takes one place per
+ * root-level question, not just per section, so it can run well past 26 —
+ * where `String.fromCharCode(65 + n)` silently produces `[`, `\`, `]`, `^`…
+ * Numbers have no such ceiling. Kept here as the single definition so the
+ * badge, the step rail, the overview cards and the section intro cannot drift
+ * apart. (Answer-option labels are a different sequence and stay lettered.)
+ */
+export function stepLabel(ordinal: number): string {
+  return String(ordinal + 1);
+}
+
+/**
+ * Total number of entries in the sequence — the value shown as the
+ * "SECTIONS" stat, and the denominator in "Section 3 of 4".
  */
 export function sectionStepCount(sections: Section[]): number {
   return sections.reduce(

@@ -1,7 +1,12 @@
 import { useEffect } from 'react';
 import { QumlProvider } from './context/QumlContext';
 import { MainPlayer } from './components/MainPlayer/MainPlayer';
-import { sampleConfig, flatSampleConfig, mixedSampleConfig } from './dev/sample-data';
+import {
+  sampleConfig,
+  flatSampleConfig,
+  mixedSampleConfig,
+  overflowSampleConfig,
+} from './dev/sample-data';
 import { initializeTelemetry } from './services/telemetry-service';
 import type { PlayerConfig } from './types';
 
@@ -25,6 +30,7 @@ function resolveConfig(): PlayerConfig {
   const sample = params.get('sample');
   if (sample === 'flat') return flatSampleConfig;
   if (sample === 'mixed') return mixedSampleConfig;
+  if (sample === 'overflow') return overflowSampleConfig;
 
   if (identifier) {
     return {

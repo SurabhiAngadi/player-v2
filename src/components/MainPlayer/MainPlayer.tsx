@@ -23,7 +23,12 @@ import {
 import { QumlApiError } from '../../types/api';
 import { calculateScore } from '../../registry/scoring-registry';
 import { isAnswered } from '../../utils/answered';
-import { expandsPerQuestion, sectionStepCount, sectionStepOrdinal } from '../../utils/sections';
+import {
+  expandsPerQuestion,
+  sectionStepCount,
+  sectionStepOrdinal,
+  stepLabel,
+} from '../../utils/sections';
 import type { Question, Section, PlayerConfig, I18nValue } from '../../types';
 import styles from './MainPlayer.module.scss';
 
@@ -753,7 +758,7 @@ export function MainPlayer({ playerConfig, onPlayerEvent }: MainPlayerProps) {
       stage === 'sectionIntro' && currentSection
         ? `${
             readI18n(currentSection.name, language) ||
-            `${t(language, 'SECTION')} ${String.fromCharCode(65 + state.currentSectionIndex)}`
+            `${t(language, 'SECTION')} ${stepLabel(sectionStepOrdinal(state.sections, state.currentSectionIndex))}`
           } · ${currentSection.children.length} ${t(
             language,
             currentSection.children.length === 1 ? 'QUESTION' : 'QUESTIONS',

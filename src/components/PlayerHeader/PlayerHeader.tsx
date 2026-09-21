@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { t, readI18n } from '../../i18n/translations';
 import { TimerIcon, MenuIcon } from '../icons';
 import { isAnswered } from '../../utils/answered';
-import { expandsPerQuestion } from '../../utils/sections';
+import { expandsPerQuestion, stepLabel } from '../../utils/sections';
 import type { Section, AnswersMap } from '../../types';
 import styles from './PlayerHeader.module.scss';
 
@@ -92,6 +92,19 @@ export function PlayerHeader({
   const isTimeLow = showCountdown && timeRemaining <= 60;
   const [showLegend, setShowLegend] = useState(false);
 
+  // The rail scrolls with its scrollbar hidden, so keep the active step in
+  // view as the learner advances — otherwise progressing past the visible
+  // range would leave the current position off-screen with no obvious way
+  // back to it. `block: 'nearest'` so this never scrolls the page itself.
+  const activeStepRef = useRef<HTMLLIElement | null>(null);
+  useEffect(() => {
+    const el = activeStepRef.current;
+    // jsdom (tests) doesn't implement scrollIntoView.
+    if (typeof el?.scrollIntoView === 'function') {
+      el.scrollIntoView({ block: 'nearest', inline: 'center' });
+    }
+  }, [currentSectionIndex, currentQuestionIndex, sections]);
+
   return (
     <header className={styles.header}>
       <div className={styles.left}>
@@ -155,11 +168,12 @@ export function PlayerHeader({
             });
 
             return steps.map((step, index) => {
-              const letter = String.fromCharCode(65 + index);
+              const letter = stepLabel(index);
               const status = step.active ? 'active' : step.completed ? 'completed' : 'upcoming';
               return (
                 <li
                   key={step.key}
+                  ref={status === 'active' ? activeStepRef : undefined}
                   className={`${styles.step} ${styles[status]}`}
                   aria-current={status === 'active' ? 'step' : undefined}
                   title={step.title}

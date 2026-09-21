@@ -86,10 +86,10 @@ describe('PlayerHeader', () => {
     // section b (1 step) = 4 steps total, lettered continuously A-D.
     const steps = screen.getAllByRole('listitem');
     expect(steps).toHaveLength(4);
-    expect(steps[0]).toHaveTextContent('A'); // section a
-    expect(steps[1]).toHaveTextContent('B'); // rq1 ("test")
-    expect(steps[2]).toHaveTextContent('C'); // rq2 ("maths")
-    expect(steps[3]).toHaveTextContent('D'); // section b
+    expect(steps[0]).toHaveTextContent('1'); // section a
+    expect(steps[1]).toHaveTextContent('2'); // rq1 ("test")
+    expect(steps[2]).toHaveTextContent('3'); // rq2 ("maths")
+    expect(steps[3]).toHaveTextContent('4'); // section b
     expect(steps[1]).toHaveAttribute('title', 'test');
     expect(steps[2]).toHaveAttribute('title', 'maths');
   });
@@ -110,7 +110,7 @@ describe('PlayerHeader', () => {
     );
     const steps = screen.getAllByRole('listitem');
     expect(steps).toHaveLength(1);
-    expect(steps[0]).toHaveTextContent('A');
+    expect(steps[0]).toHaveTextContent('1');
   });
 
   // Regression guard for the mislabel this PR fixes: an implicit section's

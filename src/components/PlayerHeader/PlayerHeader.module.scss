@@ -76,6 +76,10 @@
   display: inline-flex;
   align-items: center;
   gap: v.$space-3;
+  // Pinned: the step rail scrolls instead of stealing the brand's width.
+  // Previously the rail grew unbounded and the brand NAME was the only thing
+  // that could shrink, so it ellipsised away to nothing.
+  flex-shrink: 0;
   min-width: 0;
   padding: v.$space-1;
   border: none;
@@ -109,6 +113,9 @@
 .brandName {
   font-family: var(--qp-font-sans);
   min-width: 0;
+  // Long titles still ellipsise, but at a bound — they no longer collapse to
+  // nothing under pressure from the rail.
+  max-width: 16rem;
   font-size: v.$text-md;
   font-weight: v.$fw-regular;
   color: v.$g900;
@@ -154,6 +161,27 @@
   border-inline-start: 1px solid v.$gray-200;
   list-style: none;
 
+  // The rail is the only elastic zone in the header: brand (left) and the
+  // timer/help/counter/Review/Submit cluster (right) are both pinned, so a
+  // long sequence scrolls here instead of overflowing the row. `min-width: 0`
+  // is required — without it a flex item refuses to shrink below its content
+  // width and would push the pinned zones out regardless of overflow.
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;
+
+  // A visible horizontal scrollbar inside a 4rem header reads as a glitch.
+  // The rail stays scrollable (trackpad/wheel/drag) and the active step is
+  // scrolled into view automatically, so nothing becomes unreachable.
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
   // Hide the section-step rail on tablet and below — it competes for width
   // with the brand + timer/counter/submit cluster. The sidebar/drawer still
   // shows section progress.
@@ -165,6 +193,8 @@
 .step {
   display: flex;
   align-items: center;
+  // Keep full size inside the scroller rather than compressing to fit.
+  flex-shrink: 0;
 
   // Connector line between steps.
   &:not(:first-child)::before {

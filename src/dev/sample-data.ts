@@ -414,3 +414,29 @@ export const mixedSampleConfig: PlayerConfig = devConfig({
     ]),
   ],
 });
+
+/**
+ * STRESS: one real section + 30 root-level questions = 31 sequence entries.
+ *
+ * Deliberately MIXED, not flat — a flat set collapses to a single entry, so it
+ * cannot reproduce this. Exercises the two open review findings:
+ *   - the header step rail scrolls (brand and the right-hand control cluster
+ *     are pinned) rather than overflowing the row;
+ *   - the sequence is numbered, so entry 27+ reads 27, 28, 29 — lettering ran
+ *     past `Z` into `[`, `\`, `]`, `^`…
+ */
+export const overflowSampleConfig: PlayerConfig = devConfig({
+  identifier: 'do_dev_overflow',
+  name: 'Overflow Set (1 section + 30 root questions)',
+  description: 'Stress fixture for the header step rail and letter sequence.',
+  objectType: 'QuestionSet',
+  timeLimits: { questionSet: { max: 0, min: 0 } },
+  children: [
+    devSection('do_dev_overflow_sec', 'A Real Section', 1, [
+      devQuestion('do_dev_overflow_s1', 'Section question', 1),
+    ]),
+    ...Array.from({ length: 30 }, (_, i) =>
+      devQuestion(`do_dev_overflow_q${i + 1}`, `Root question ${i + 1}`, i + 2),
+    ),
+  ],
+});

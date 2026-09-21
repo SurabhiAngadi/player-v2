@@ -1,5 +1,6 @@
 import { t, readI18n } from '../../i18n/translations';
 import { PreviousIcon } from '../icons';
+import { stepLabel } from '../../utils/sections';
 import type { Section } from '../../types';
 import styles from './SectionIntro.module.scss';
 
@@ -27,7 +28,7 @@ export function SectionIntro({
   onPrevious,
   language = 'en',
 }: SectionIntroProps) {
-  const letter = String.fromCharCode(65 + sectionIndex);
+  const letter = stepLabel(sectionIndex);
   const questionCount = section.children?.length ?? 0;
   const instructions = readI18n(section.instructions, language) || t(language, 'MANDATORY_NOTE');
   // The section's actual authored name (matching StartPage's section cards /

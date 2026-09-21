@@ -29,7 +29,7 @@ describe('SectionIntro', () => {
     expect(screen.getByText('Answer all questions.')).toBeInTheDocument();
   });
 
-  it('falls back to "Section {letter}" when the section has no name', () => {
+  it('falls back to "Section {number}" when the section has no name', () => {
     render(
       <SectionIntro
         section={{ ...section, name: '' }}
@@ -38,7 +38,7 @@ describe('SectionIntro', () => {
         onBegin={vi.fn()}
       />,
     );
-    expect(screen.getByText(/^section b$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^section 2$/i)).toBeInTheDocument();
   });
 
   it('falls back to a default instruction when none is provided', () => {

@@ -9,7 +9,7 @@ import {
   ShieldIcon,
   PreviousIcon,
 } from '../icons';
-import { expandsPerQuestion } from '../../utils/sections';
+import { expandsPerQuestion, stepLabel } from '../../utils/sections';
 import type { Section } from '../../types';
 import { useIsCompactViewport } from './useIsCompactViewport';
 import styles from './StartPage.module.scss';
@@ -186,7 +186,7 @@ export function StartPage({
                         >
                           <div className={styles.cardTop}>
                             <span className={styles.badge} aria-hidden="true">
-                              {String.fromCharCode(65 + ordinal)}
+                              {stepLabel(ordinal)}
                             </span>
                             <span className={styles.cardName}>{qName}</span>
                             {questionSelectable && (
@@ -218,7 +218,7 @@ export function StartPage({
                     >
                       <div className={styles.cardTop}>
                         <span className={styles.badge} aria-hidden="true">
-                          {String.fromCharCode(65 + ordinal)}
+                          {stepLabel(ordinal)}
                         </span>
                         <span className={styles.cardName}>{name}</span>
                         {sectionSelectable && (

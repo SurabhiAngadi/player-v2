@@ -91,7 +91,7 @@ function stat(container: HTMLElement, label: string): string | undefined {
 
 describe('MainPlayer overview — SECTIONS count with root-level questions', () => {
   it('counts each root-level question as its own section, not the whole implicit group as one', () => {
-    render(
+    const { container } = render(
       <QumlProvider playerConfig={cfg}>
         <MainPlayer playerConfig={cfg} />
       </QumlProvider>,
@@ -99,8 +99,10 @@ describe('MainPlayer overview — SECTIONS count with root-level questions', () 
     // 1 real section (2 questions) + 2 root-level questions = 4 total questions,
     // 1 (section) + 2 (each root question) = 3 total "sections".
     // Buggy behavior (state.sections.length) would report 2 instead of 3.
-    expect(screen.getByText('4')).toBeInTheDocument(); // QUESTIONS
-    expect(screen.getByText('3')).toBeInTheDocument(); // SECTIONS
+    // Read via the stat label: sequence badges are numbers too, so a bare
+    // getByText('3') matches the badge as well as the tile.
+    expect(stat(container, 'questions')).toBe('4');
+    expect(stat(container, 'sections')).toBe('3');
   });
 
   // A FLAT questionset has no authored sections at all, so there is nothing for

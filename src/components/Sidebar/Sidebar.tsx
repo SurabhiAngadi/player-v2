@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { t, readI18n } from '../../i18n/translations';
 import { isAnswered } from '../../utils/answered';
 import { ChevronRightIcon } from '../icons';
-import { expandsPerQuestion } from '../../utils/sections';
+import { expandsPerQuestion, stepLabel } from '../../utils/sections';
 import type { Section, Question, AnswersMap } from '../../types';
 import styles from './Sidebar.module.scss';
 
@@ -143,7 +143,7 @@ export function Sidebar({
           if (section.isImplicitSection) {
             const lettered = expandsPerQuestion(section, sections);
             return section.children.map((question, qIndex) => {
-              const letter = lettered ? String.fromCharCode(65 + letterOrdinal) : undefined;
+              const letter = lettered ? stepLabel(letterOrdinal) : undefined;
               if (lettered) letterOrdinal += 1;
               return (
                 <QuestionRow
@@ -170,7 +170,7 @@ export function Sidebar({
           const answered = answeredCount(section, answers);
           const blurb = readI18n(section.description, language);
           const name = readI18n(section.name, language);
-          const letter = String.fromCharCode(65 + letterOrdinal);
+          const letter = stepLabel(letterOrdinal);
           letterOrdinal += 1;
 
           return (
